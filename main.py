@@ -59,4 +59,5 @@ async def start_handler(message: types.Message):
         await message.answer("Привет! Я работаю через вебхук.")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+
