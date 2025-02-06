@@ -1,4 +1,3 @@
-
 import os
 import openai
 import asyncio
@@ -15,7 +14,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Инициализация бота
 bot = Bot(token=TOKEN)
-dp = Dispatcher(bot)
+dp = Dispatcher()
 
 # Устанавливаем API-ключ OpenAI
 openai.api_key = OPENAI_API_KEY
@@ -33,7 +32,8 @@ async def chat_with_gpt(message: Message):
 import asyncio
 
 async def main():
-    await dp.start_polling()
+    await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
