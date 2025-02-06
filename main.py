@@ -7,19 +7,19 @@ from aiogram.types import Message
 from aiogram.utils import executor
 from dotenv import load_dotenv
 
-# Загружаем токены из переменных окружения
+# Р—Р°РіСЂСѓР¶Р°РµРј С‚РѕРєРµРЅС‹ РёР· РїРµСЂРµРјРµРЅРЅС‹С… РѕРєСЂСѓР¶РµРЅРёСЏ
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Инициализация бота
+# РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ Р±РѕС‚Р°
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 
-# Устанавливаем API-ключ OpenAI
+# РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј API-РєР»СЋС‡ OpenAI
 openai.api_key = OPENAI_API_KEY
 
-# Обработчик сообщений
+# РћР±СЂР°Р±РѕС‚С‡РёРє СЃРѕРѕР±С‰РµРЅРёР№
 @dp.message_handler()
 async def chat_with_gpt(message: Message):
     response = openai.ChatCompletion.create(
@@ -28,6 +28,6 @@ async def chat_with_gpt(message: Message):
     )
     await message.reply(response["choices"][0]["message"]["content"])
 
-# Запуск бота
+# Р—Р°РїСѓСЃРє Р±РѕС‚Р°
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)
