@@ -1,6 +1,6 @@
 import os
 import logging
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, types, Router
 from aiogram.types import Update
 from fastapi import FastAPI, Request
 from dotenv import load_dotenv
@@ -16,35 +16,34 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
+# Добавляем Router (в aiogram 3.x обработчики вешаются на него)
+router = Router()
+dp.include_router(router)
+
 # Создаём FastAPI приложение
 app = FastAPI()
 
-# Указываем URL вебхука (замени на свой)
+# Указываем URL вебхука
 WEBHOOK_URL = "https://chatbot-crf8.onrender.com/webhook"
 
 @app.post("/webhook")
 async def telegram_webhook(request: Request):
     update = await request.json()
     telegram_update = Update(**update)
-    await dp.process_update(telegram_update)
+    await dp.feed_update(bot, telegram_update)
     return {"status": "ok"}
 
-# Обработчик команд
-@dp.message_handler(commands=["start"])
-async def start(message: types.Message):
-    await message.answer("Привет! Я работаю через вебхук.")
+# Обработчик команды /start
+@router.message()
+async def start_handler(message: types.Message):
+    if message.text == "/start":
+        await message.answer("Привет! Я работаю через вебхук.")
 
-async def on_startup():
-    await bot.set_webhook(WEBHOOK_URL)
-
-async def on_shutdown():
-    await bot.delete_webhook()
-
-# Запуск настроек FastAPI
+# Настройка FastAPI при старте
 @app.on_event("startup")
 async def startup():
-    await on_startup()
+    await bot.set_webhook(WEBHOOK_URL)
 
 @app.on_event("shutdown")
 async def shutdown():
-    await on_shutdown()
+    await bot.delete_webhook()
