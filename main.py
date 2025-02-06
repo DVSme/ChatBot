@@ -20,13 +20,19 @@ dp = Dispatcher()
 openai.api_key = OPENAI_API_KEY
 
 # Обработчик сообщений
-@dp.message_handler()
+
+from aiogram import Router, F
+router = Router()
+
+@router.message()
 async def chat_with_gpt(message: Message):
     response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=[{"role": "user", "content": message.text}]
     )
     await message.reply(response["choices"][0]["message"]["content"])
+
+dp.include_router(router)
 
 # Запуск бота
 import asyncio
