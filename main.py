@@ -1,42 +1,50 @@
 import os
 import logging
-from fastapi import FastAPI, Request
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import Update
-from aiogram.filters import Command
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram import Router
+from fastapi import FastAPI, Request
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения
+load_dotenv()
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
 
-# Создаем бота и диспетчер
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+# Создаём экземпляры бота и диспетчера
 bot = Bot(token=TOKEN)
-storage = MemoryStorage()
-dp = Dispatcher(storage=storage)
+dp = Dispatcher()
 
-# Создаем роутер для хэндлеров
-router = Router()
-dp.include_router(router)
-
-# FastAPI приложение
+# Создаём FastAPI приложение
 app = FastAPI()
 
-# Вебхук обработчик
+# Указываем URL вебхука (замени на свой)
+WEBHOOK_URL = "https://chatbot-crf8.onrender.com/webhook"
+
 @app.post("/webhook")
 async def telegram_webhook(request: Request):
-    data = await request.json()
-    telegram_update = Update(**data)
-    await dp._process_update(telegram_update)
+    update = await request.json()
+    telegram_update = Update(**update)
+    await dp.process_update(telegram_update)
+    return {"status": "ok"}
 
-# Команда /start
-@router.message(Command("start"))
+# Обработчик команд
+@dp.message_handler(commands=["start"])
 async def start(message: types.Message):
-    await message.answer("Привет! Бот работает через Webhook.")
+    await message.answer("Привет! Я работаю через вебхук.")
 
-# Устанавливаем вебхук при запуске
-@app.on_event("startup")
 async def on_startup():
-    webhook_url = "https://chatbot-crf8.onrender.com/webhook"
-    await bot.set_webhook(webhook_url)
+    await bot.set_webhook(WEBHOOK_URL)
+
+async def on_shutdown():
+    await bot.delete_webhook()
+
+# Запуск настроек FastAPI
+@app.on_event("startup")
+async def startup():
+    await on_startup()
+
+@app.on_event("shutdown")
+async def shutdown():
+    await on_shutdown()
