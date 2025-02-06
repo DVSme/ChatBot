@@ -9,7 +9,7 @@ import uvicorn
 # Загружаем переменные окружения
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-PORT = int(os.getenv("PORT", 8000))  # Используем порт из переменных окружения
+PORT = int(os.getenv("PORT", 8000))  # Render использует этот порт
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
@@ -24,20 +24,26 @@ dp.include_router(router)
 app = FastAPI()
 
 # URL вебхука
-WEBHOOK_URL = "https://chatbot-crf8.onrender.com/webhook"
+WEBHOOK_URL = f"https://chatbot-crf8.onrender.com/webhook"
 
+# Тестовый маршрут (проверка работы сервера)
 @app.get("/")
 async def root():
     return {"message": "Bot is running!"}
 
+# Основной маршрут вебхука
 @app.post("/webhook")
 async def telegram_webhook(request: Request):
-    update = await request.json()
-    telegram_update = Update(**update)
-    await dp.feed_update(bot, telegram_update)
-    return {"status": "ok"}
+    try:
+        update = await request.json()
+        telegram_update = Update(**update)
+        await dp.feed_update(bot, telegram_update)
+        return {"status": "ok"}
+    except Exception as e:
+        logging.error(f"Ошибка в обработке вебхука: {e}")
+        return {"status": "error", "message": str(e)}
 
-# Настройка вебхука при старте
+# Устанавливаем вебхук при старте приложения
 @app.on_event("startup")
 async def startup():
     await bot.set_webhook(WEBHOOK_URL)
