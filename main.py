@@ -3,14 +3,24 @@ import logging
 from fastapi import FastAPI, Request
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import Update
+from aiogram.filters import Command
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram import Router
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
 
-# Загружаем токен бота
+# Создаем бота и диспетчер
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 bot = Bot(token=TOKEN)
-dp = Dispatcher()
+storage = MemoryStorage()
+dp = Dispatcher(storage=storage)
+
+# Создаем роутер для хэндлеров
+router = Router()
+dp.include_router(router)
+
+# FastAPI приложение
 app = FastAPI()
 
 # Вебхук обработчик
@@ -18,10 +28,10 @@ app = FastAPI()
 async def telegram_webhook(request: Request):
     data = await request.json()
     telegram_update = Update(**data)
-    await dp.process_update(telegram_update)
+    await dp._process_update(telegram_update)
 
 # Команда /start
-@dp.message_handler(commands=["start"])
+@router.message(Command("start"))
 async def start(message: types.Message):
     await message.answer("Привет! Бот работает через Webhook.")
 
