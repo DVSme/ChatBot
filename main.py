@@ -1,46 +1,43 @@
 import os
-import openai
-import asyncio
+import logging
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import Message
-from aiogram import Dispatcher
-import asyncio
+from aiogram.types import Update
+from aiogram.utils.webhook import configure_app
+from fastapi import FastAPI
 from dotenv import load_dotenv
 
 # Загружаем токены из переменных окружения
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Инициализация бота
+# Логирование
+logging.basicConfig(level=logging.INFO)
+
+# Создание экземпляра бота и диспетчера
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# Устанавливаем API-ключ OpenAI
-openai.api_key = OPENAI_API_KEY
+# Создание FastAPI приложения
+app = FastAPI()
 
-# Обработчик сообщений
+# Указываем URL вебхука (замени на свой домен Render)
+WEBHOOK_URL = "https://your-app-name.onrender.com/webhook"
 
-from aiogram import Router, F
-router = Router()
+@app.post("/webhook")
+async def telegram_webhook(update: dict):
+    telegram_update = Update(**update)
+    await dp.process_update(telegram_update)
 
-@router.message()
-async def chat_with_gpt(message: Message):
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": message.text}]
-    )
-    await message.reply(response["choices"][0]["message"]["content"])
+# Обработчик команд
+@dp.message()
+async def echo(message: types.Message):
+    await message.answer(f"Вы сказали: {message.text}")
 
-dp.include_router(router)
+async def on_startup():
+    await bot.set_webhook(WEBHOOK_URL)
 
-# Запуск бота
-import asyncio
+async def on_shutdown():
+    await bot.delete_webhook()
 
-async def main():
-    await dp.start_polling(bot)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-
+# Настроим приложение с aiogram
+configure_app(dp, app, on_startup=on_startup, on_shutdown=on_shutdown)
