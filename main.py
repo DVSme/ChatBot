@@ -12,6 +12,9 @@ load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+print(f"✅ TELEGRAM_BOT_TOKEN: {TOKEN}")
+print(f"✅ OPENAI_API_KEY: {OPENAI_API_KEY[:5]}...")  # Выводит только первые 5 символов для безопасности
+
 # Проверяем, загружены ли API-ключи
 if not TOKEN:
     raise ValueError("❌ TELEGRAM_BOT_TOKEN не найден в переменных окружения!")
@@ -19,7 +22,7 @@ if not OPENAI_API_KEY:
     raise ValueError("❌ OPENAI_API_KEY не найден в переменных окружения!")
 
 # Настраиваем OpenAI API
-openai.api_key = OPENAI_API_KEY  # ✅ Оставляем только это!
+# openai.api_key = OPENAI_API_KEY  # ✅ Оставляем только это!
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
@@ -75,10 +78,10 @@ async def chatgpt_handler(message: types.Message):
            model="gpt-4-turbo",
            messages=[{"role": "user", "content": user_input}]
         )  
-        bot_response = response.choices[0].message.content
 
         # Получаем ответ от ChatGPT
-        bot_response = response["choices"][0]["message"]["content"]
+        bot_response = response.choices[0].message.content
+
         logging.info(f"🤖 Ответ ChatGPT: {bot_response}")
 
         await message.answer(bot_response)
