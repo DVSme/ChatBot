@@ -19,7 +19,7 @@ if not OPENAI_API_KEY:
     raise ValueError("❌ OPENAI_API_KEY не найден в переменных окружения!")
 
 # Настраиваем OpenAI API
-openai.api_key = OPENAI_API_KEY
+openai.api_key = OPENAI_API_KEY  # ✅ Оставляем только это!
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
@@ -61,9 +61,6 @@ async def shutdown():
     logging.info("✅ Webhook удалён")
 
 # Обработчик сообщений с ChatGPT
-
-client = openai.OpenAI(api_key=OPENAI_API_KEY)
-
 @router.message()
 async def chatgpt_handler(message: types.Message):
     try:
@@ -71,7 +68,7 @@ async def chatgpt_handler(message: types.Message):
         logging.info(f"📩 Пользователь отправил: {user_input}")
 
         # API вызов OpenAI
-        response = client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model="gpt-4-turbo",
             messages=[{"role": "user", "content": user_input}]
         )
@@ -84,7 +81,7 @@ async def chatgpt_handler(message: types.Message):
 
     except Exception as e:
         logging.error(f"❌ Ошибка в обработке сообщения: {e}")
-        await message.answer("⚠️ Произошла ошибка при обработке запроса.")
+        await message.answer(f"⚠️ Ошибка: {str(e)}")
 
 # Запуск FastAPI
 if __name__ == "__main__":
