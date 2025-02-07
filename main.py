@@ -61,6 +61,8 @@ async def shutdown():
     logging.info("Webhook удалён")
 
 # Обработчик всех сообщений через ChatGPT
+client = openai.OpenAI()  # Создаём клиент OpenAI
+
 @router.message()
 async def chatgpt_handler(message: types.Message):
     try:
@@ -68,7 +70,7 @@ async def chatgpt_handler(message: types.Message):
         logging.info(f"Пользователь отправил: {user_input}")
 
         # Новый API вызов OpenAI
-        response = openai.client.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4-turbo",
             messages=[{"role": "user", "content": user_input}]
         )
