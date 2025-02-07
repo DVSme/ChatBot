@@ -4,11 +4,11 @@ from openai import OpenAI
 from aiogram import Bot, Dispatcher, types, Router
 from aiogram.types import Update
 from fastapi import FastAPI, Request
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 import uvicorn
 
 # Загружаем переменные окружения
-load_dotenv()
+#load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -75,7 +75,7 @@ async def chatgpt_handler(message: types.Message):
 
         # API вызов OpenAI
         response = client.chat.completions.create(
-           model="gpt-4-turbo",
+           model="gpt-4o-mini",
            messages=[{"role": "user", "content": user_input}]
         )  
 
