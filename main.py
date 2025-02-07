@@ -61,21 +61,20 @@ async def shutdown():
     logging.info("Webhook удалён")
 
 # Обработчик всех сообщений через ChatGPT
-client = openai.OpenAI()  # Создаём клиент OpenAI
-
 @router.message()
 async def chatgpt_handler(message: types.Message):
     try:
         user_input = message.text
         logging.info(f"Пользователь отправил: {user_input}")
 
-        # Новый API вызов OpenAI
-        response = client.chat.completions.create(
+        # Новый API вызов OpenAI (исправленный)
+        response = openai.ChatCompletion.create(
             model="gpt-4-turbo",
-            messages=[{"role": "user", "content": user_input}]
+            messages=[{"role": "user", "content": user_input}],
+            api_key=os.getenv("OPENAI_API_KEY")  # Берём API-ключ из переменных окружения
         )
 
-        bot_response = response.choices[0].message.content  # Новый синтаксис
+        bot_response = response["choices"][0]["message"]["content"]  # Новый синтаксис
         logging.info(f"Ответ ChatGPT: {bot_response}")
 
         await message.answer(bot_response)
