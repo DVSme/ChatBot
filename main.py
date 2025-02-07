@@ -32,7 +32,7 @@ app = FastAPI()
 
 # URL вебхука
 WEBHOOK_URL = f"https://chatbot-cfr8.onrender.com/webhook"
-PING_URL = "https://chatbot-cfr8.onrender.com/ping"  # ✅ Исправленный Keep-Alive
+PING_URL = "https://chatbot-cfr8.onrender.com/ping"
 
 # ✅ Проверяем и устанавливаем вебхук
 async def set_webhook():
@@ -43,25 +43,32 @@ async def set_webhook():
     else:
         logging.info("✅ Webhook уже установлен")
 
+# ✅ Keep-Alive (Исправленный)
+async def keep_awake():
+    await asyncio.sleep(5)  # ДАЁМ ВРЕМЯ НА СТАРТ!
+    while True:
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(PING_URL)
+                logging.info(f"🔄 Keep-alive ping sent: {response.status_code}")
+        except Exception as e:
+            logging.error(f"❌ Keep-alive error: {e}")
+
+        await asyncio.sleep(30)  # 30 секунд
+
+# ✅ Запускаем бота
+async def run_bot():
+    try:
+        await dp.start_polling(bot)
+    except Exception as e:
+        logging.error(f"❌ Ошибка при запуске бота: {e}")
+
 # 🚀 Запускаем сервер
 @app.on_event("startup")
 async def startup():
     await set_webhook()
-    
-    # ✅ Keep-Alive (Исправленный)
-    async def keep_awake():
-        await asyncio.sleep(5)  # ДАЁМ ВРЕМЯ НА СТАРТ!
-        while True:
-            try:
-                async with httpx.AsyncClient() as client:
-                    response = await client.get(PING_URL)  # ✅ Теперь пингует правильно!
-                    logging.info(f"🔄 Keep-alive ping sent: {response.status_code}")
-            except Exception as e:
-                logging.error(f"❌ Keep-alive error: {e}")
-
-            await asyncio.sleep(30)  # 30 секунд
-
-    asyncio.create_task(keep_awake())  # Запускаем Keep-alive
+    asyncio.create_task(keep_awake())  # Keep-Alive
+    asyncio.create_task(run_bot())  # ✅ Запускаем бота в фоне!
 
 @app.on_event("shutdown")
 async def shutdown():
@@ -83,7 +90,7 @@ async def ping():
 async def telegram_webhook(request: Request):
     update = await request.json()
     telegram_update = Update.model_validate(update)  # Валидация данных
-    await dp.feed_update(bot, telegram_update)  # ✅ Исправлено
+    await dp.feed_update(bot, telegram_update)
     return {"status": "ok"}
 
 # 🔥 Обработчик сообщений с ChatGPT
