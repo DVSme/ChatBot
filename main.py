@@ -34,7 +34,7 @@ dp.include_router(router)
 app = FastAPI()
 
 # URL вебхука
-WEBHOOK_URL = f"https://chatbot-crf8.onrender.com/webhook"
+WEBHOOK_URL = f"https://chatbot-cfr8.onrender.com/webhook"
 
 # Тестовый маршрут (проверка работы сервера)
 @app.get("/")
