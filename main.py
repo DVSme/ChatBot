@@ -58,7 +58,7 @@ async def startup():
             except Exception as e:
                 logging.error(f"❌ Keep-alive error: {e}")
 
-            await asyncio.sleep(600)  # 10 минут
+            await asyncio.sleep(30)  # 30 секунд
 
     asyncio.create_task(keep_awake())  # Запускаем Keep-alive
 
