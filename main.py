@@ -56,19 +56,11 @@ async def keep_awake():
 
         await asyncio.sleep(30)  # 30 секунд
 
-# ✅ Запускаем бота
-async def run_bot():
-    try:
-        await dp.start_polling(bot)
-    except Exception as e:
-        logging.error(f"❌ Ошибка при запуске бота: {e}")
-
 # 🚀 Запускаем сервер
 @app.on_event("startup")
 async def startup():
     await set_webhook()
     asyncio.create_task(keep_awake())  # Keep-Alive
-    asyncio.create_task(run_bot())  # ✅ Запускаем бота в фоне!
 
 @app.on_event("shutdown")
 async def shutdown():
