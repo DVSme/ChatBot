@@ -68,7 +68,7 @@ async def chatgpt_handler(message: types.Message):
         logging.info(f"📩 Пользователь отправил: {user_input}")
 
         # API вызов OpenAI
-        response = openai.ChatCompletion.create(
+        response = openai.completions.create(
             model="gpt-4-turbo",
             messages=[{"role": "user", "content": user_input}]
         )
