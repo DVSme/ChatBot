@@ -1,5 +1,6 @@
 import os
 import logging
+import openai
 from aiogram import Bot, Dispatcher, types, Router
 from aiogram.types import Update
 from fastapi import FastAPI, Request
@@ -9,7 +10,16 @@ import uvicorn
 # Загружаем переменные окружения
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-PORT = int(os.getenv("PORT", 8000))  # Render использует этот порт
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Проверяем, загружены ли API-ключи
+if not TOKEN:
+    raise ValueError("TELEGRAM_BOT_TOKEN не найден в переменных окружения!")
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY не найден в переменных окружения!")
+
+# Настраиваем OpenAI API
+openai.api_key = OPENAI_API_KEY
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
@@ -34,33 +44,38 @@ async def root():
 # Основной маршрут вебхука
 @app.post("/webhook")
 async def telegram_webhook(request: Request):
-    try:
-        update = await request.json()
-        telegram_update = Update(**update)
-        await dp.feed_update(bot, telegram_update)
-        return {"status": "ok"}
-    except Exception as e:
-        logging.error(f"Ошибка в обработке вебхука: {e}")
-        return {"status": "error", "message": str(e)}
+    update = await request.json()
+    telegram_update = Update.model_validate(update)  # Валидация данных
+    await dp.feed_update(bot, telegram_update)
+    return {"status": "ok"}
 
 # Устанавливаем вебхук при старте приложения
 @app.on_event("startup")
 async def startup():
     await bot.set_webhook(WEBHOOK_URL)
+    logging.info(f"Webhook установлен: {WEBHOOK_URL}")
 
 @app.on_event("shutdown")
 async def shutdown():
     await bot.delete_webhook()
+    logging.info("Webhook удалён")
 
-# Обработчик команды /start
+# Обработчик всех сообщений через ChatGPT
 @router.message()
-async def start_handler(message: types.Message):
-    if message.text == "/start":
-        await message.answer("Привет! Я работаю через вебхук.")
+async def chatgpt_handler(message: types.Message):
+    user_input = message.text  # Получаем текст от пользователя
 
+    # Отправляем запрос в OpenAI (ChatGPT)
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",  # Можно заменить на "gpt-4", если есть доступ
+        messages=[{"role": "user", "content": user_input}]
+    )
+
+    bot_response = response["choices"][0]["message"]["content"]  # Получаем ответ
+
+    await message.answer(bot_response)  # Отправляем ответ пользователю
+
+# Запуск FastAPI
 if __name__ == "__main__":
-    import uvicorn
-    print("Запуск FastAPI...")  # Для проверки в логах
+    print("Запуск FastAPI...")  # Вывод в логах
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
-
-
