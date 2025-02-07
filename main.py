@@ -56,11 +56,24 @@ async def keep_awake():
 
         await asyncio.sleep(30)  # 30 секунд
 
+# ✅ Перезапуск Webhook каждые 50 секунд
+async def restart_webhook():
+    await asyncio.sleep(5)  # ДАЁМ ВРЕМЯ НА СТАРТ!
+    while True:
+        try:
+            await bot.set_webhook(WEBHOOK_URL)
+            logging.info("🔄 Webhook перезапущен.")
+        except Exception as e:
+            logging.error(f"❌ Ошибка при перезапуске Webhook: {e}")
+
+        await asyncio.sleep(50)  # 🔄 Перезапускаем Webhook каждые 50 секунд
+
 # 🚀 Запускаем сервер
 @app.on_event("startup")
 async def startup():
     await set_webhook()
     asyncio.create_task(keep_awake())  # Keep-Alive
+    asyncio.create_task(restart_webhook())  # ✅ Автоматический перезапуск Webhook
 
 @app.on_event("shutdown")
 async def shutdown():
