@@ -63,17 +63,24 @@ async def shutdown():
 # Обработчик всех сообщений через ChatGPT
 @router.message()
 async def chatgpt_handler(message: types.Message):
-    user_input = message.text  # Получаем текст от пользователя
+    try:
+        user_input = message.text  # Получаем текст от пользователя
+        logging.info(f"Пользователь отправил: {user_input}")  # Логируем входящий текст
 
-    # Отправляем запрос в OpenAI (ChatGPT)
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",  # Можно заменить на "gpt-4", если есть доступ
-        messages=[{"role": "user", "content": user_input}]
-    )
+        # Отправляем запрос в OpenAI (ChatGPT)
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": user_input}]
+        )
 
-    bot_response = response["choices"][0]["message"]["content"]  # Получаем ответ
+        bot_response = response["choices"][0]["message"]["content"]  # Получаем ответ
+        logging.info(f"Ответ ChatGPT: {bot_response}")  # Логируем ответ
 
-    await message.answer(bot_response)  # Отправляем ответ пользователю
+        await message.answer(bot_response)  # Отправляем ответ пользователю
+
+    except Exception as e:
+        logging.error(f"Ошибка в обработке сообщения: {e}")
+        await message.answer("Произошла ошибка при обработке запроса.")
 
 # Запуск FastAPI
 if __name__ == "__main__":
