@@ -32,6 +32,7 @@ app = FastAPI()
 
 # URL вебхука
 WEBHOOK_URL = f"https://chatbot-cfr8.onrender.com/webhook"
+PING_URL = "https://chatbot-cfr8.onrender.com/ping"  # ✅ Исправленный Keep-Alive
 
 # ✅ Проверяем и устанавливаем вебхук
 async def set_webhook():
@@ -47,12 +48,12 @@ async def set_webhook():
 async def startup():
     await set_webhook()
     
-    # ✅ Keep-Alive
+    # ✅ Keep-Alive (Исправленный)
     async def keep_awake():
         while True:
             try:
                 async with httpx.AsyncClient() as client:
-                    response = await client.get(WEBHOOK_URL.replace("/webhook", "/ping"))
+                    response = await client.get(PING_URL)  # ✅ Теперь пингует правильно!
                     logging.info(f"🔄 Keep-alive ping sent: {response.status_code}")
             except Exception as e:
                 logging.error(f"❌ Keep-alive error: {e}")
