@@ -44,12 +44,17 @@ WEBHOOK_URL = f"https://chatbot-cfr8.onrender.com/webhook"
 async def root():
     return {"message": "✅ Bot is running!"}
 
+# Пинг для подъема
+@app.get("/ping")
+async def ping():
+    return {"status": "I'm awake!"}
+
 # Основной маршрут вебхука
 @app.post("/webhook")
 async def telegram_webhook(request: Request):
     update = await request.json()
     telegram_update = Update.model_validate(update)  # Валидация данных
-    await dp.feed_update(bot, telegram_update)
+    await dp.process_update(telegram_update)
     return {"status": "ok"}
 
 # Устанавливаем вебхук при старте приложения
