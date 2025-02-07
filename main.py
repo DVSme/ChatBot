@@ -50,6 +50,7 @@ async def startup():
     
     # ✅ Keep-Alive (Исправленный)
     async def keep_awake():
+        await asyncio.sleep(5)  # ДАЁМ ВРЕМЯ НА СТАРТ!
         while True:
             try:
                 async with httpx.AsyncClient() as client:
