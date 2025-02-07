@@ -69,7 +69,7 @@ async def chatgpt_handler(message: types.Message):
 
         # Отправляем запрос в OpenAI (ChatGPT)
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4-turbo",
             messages=[{"role": "user", "content": user_input}]
         )
 
