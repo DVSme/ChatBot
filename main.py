@@ -36,7 +36,7 @@ WEBHOOK_URL = f"https://chatbot-cfr8.onrender.com/webhook"
 # ✅ Проверяем и устанавливаем вебхук
 async def set_webhook():
     webhook_info = await bot.get_webhook_info()
-    if webhook_info.url != WEBHOOK_URL:
+    if not webhook_info.url or webhook_info.url != WEBHOOK_URL:
         await bot.set_webhook(WEBHOOK_URL)
         logging.info(f"✅ Webhook установлен: {WEBHOOK_URL}")
     else:
@@ -52,7 +52,7 @@ async def startup():
         while True:
             try:
                 async with httpx.AsyncClient() as client:
-                    response = await client.get(WEBHOOK_URL + "/ping")
+                    response = await client.get(WEBHOOK_URL.replace("/webhook", "/ping"))
                     logging.info(f"🔄 Keep-alive ping sent: {response.status_code}")
             except Exception as e:
                 logging.error(f"❌ Keep-alive error: {e}")
@@ -81,7 +81,7 @@ async def ping():
 async def telegram_webhook(request: Request):
     update = await request.json()
     telegram_update = Update.model_validate(update)  # Валидация данных
-    await bot.update.dispatch(telegram_update)  # ✅ Исправили process_update
+    await dp._feed_raw_update(bot, telegram_update)  # ✅ Исправлено
     return {"status": "ok"}
 
 # 🔥 Обработчик сообщений с ChatGPT
