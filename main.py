@@ -1,6 +1,6 @@
 import os
 import logging
-import openai
+from openai import OpenAI
 from aiogram import Bot, Dispatcher, types, Router
 from aiogram.types import Update
 from fastapi import FastAPI, Request
@@ -61,6 +61,9 @@ async def shutdown():
     logging.info("✅ Webhook удалён")
 
 # Обработчик сообщений с ChatGPT
+
+client = OpenAI(api_key=OPENAI_API_KEY)
+
 @router.message()
 async def chatgpt_handler(message: types.Message):
     try:
@@ -68,10 +71,11 @@ async def chatgpt_handler(message: types.Message):
         logging.info(f"📩 Пользователь отправил: {user_input}")
 
         # API вызов OpenAI
-        response = openai.ChatCompletion.create(
-            model="gpt-4-turbo",
-            messages=[{"role": "user", "content": user_input}]
-        )
+        response = client.chat.completions.create(
+           model="gpt-4-turbo",
+           messages=[{"role": "user", "content": user_input}]
+        )  
+        bot_response = response.choices[0].message.content
 
         # Получаем ответ от ChatGPT
         bot_response = response["choices"][0]["message"]["content"]
