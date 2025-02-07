@@ -4,7 +4,8 @@ from openai import OpenAI
 from aiogram import Bot, Dispatcher, types, Router
 from aiogram.types import Update
 from fastapi import FastAPI, Request
-#from dotenv import load_dotenv
+import asyncio
+import httpx
 import uvicorn
 
 # Загружаем переменные окружения
@@ -20,9 +21,6 @@ if not TOKEN:
     raise ValueError("❌ TELEGRAM_BOT_TOKEN не найден в переменных окружения!")
 if not OPENAI_API_KEY:
     raise ValueError("❌ OPENAI_API_KEY не найден в переменных окружения!")
-
-# Настраиваем OpenAI API
-# openai.api_key = OPENAI_API_KEY  # ✅ Оставляем только это!
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
@@ -94,6 +92,25 @@ async def chatgpt_handler(message: types.Message):
     except Exception as e:
         logging.error(f"❌ Ошибка в обработке сообщения: {e}")
         await message.answer(f"⚠️ Ошибка: {str(e)}")
+# Подъем бота
+async def keep_awake():
+    while True:
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(WEBHOOK_URL + "/ping")
+                logging.info(f"🔄 Keep-alive ping sent: {response.status_code}")
+        except Exception as e:
+            logging.error(f"❌ Keep-alive error: {e}")
+
+        await asyncio.sleep(600)  # Пинг каждые 10 минут (600 секунд)
+
+@app.on_event("startup")
+async def startup():
+    await bot.set_webhook(WEBHOOK_URL)
+    logging.info(f"✅ Webhook установлен: {WEBHOOK_URL}")
+
+    # Запускаем фоновый процесс
+    asyncio.create_task(keep_awake())  
 
 # Запуск FastAPI
 if __name__ == "__main__":
