@@ -81,7 +81,7 @@ async def ping():
 async def telegram_webhook(request: Request):
     update = await request.json()
     telegram_update = Update.model_validate(update)  # Валидация данных
-    await dp._feed_raw_update(bot, telegram_update)  # ✅ Исправлено
+    await dp.feed_update(bot, telegram_update)  # ✅ Исправлено
     return {"status": "ok"}
 
 # 🔥 Обработчик сообщений с ChatGPT
