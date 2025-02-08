@@ -19,7 +19,7 @@ if not OPENAI_API_KEY:
     raise ValueError("❌ OPENAI_API_KEY не найден в переменных окружения!")
 
 # Логирование
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Создаём бота и диспетчер
 bot = Bot(token=TOKEN)
@@ -107,11 +107,23 @@ async def chatgpt_handler(message: types.Message):
         user_input = message.text
         logging.info(f"📩 Пользователь отправил: {user_input}")
 
-        # API вызов OpenAI
+        selected_model = "gpt-4o-mini"  # ✅ Принудительно указываем модель
+
+        # Логируем, какая модель будет отправлена в API
+        logging.info(f"🚀 Отправляем запрос в OpenAI с моделью: {selected_model}")
+
         response = client.chat.completions.create(
-           model="gpt-4o-mini",
-           messages=[{"role": "user", "content": user_input}]
-        )  
+            model=selected_model,
+            messages=[{"role": "user", "content": user_input}]
+        )
+
+        # ✅ Проверяем, какую модель реально вернул OpenAI
+        real_model_used = response.model
+        logging.info(f"✅ OpenAI вернул модель: {real_model_used}")
+
+        # ❌ Если OpenAI вернул другую модель, логируем ошибку
+        if real_model_used != selected_model:
+            logging.warning(f"⚠️ OpenAI самовольно заменил модель: {real_model_used} вместо {selected_model}")
 
         bot_response = response.choices[0].message.content
         logging.info(f"🤖 Ответ ChatGPT: {bot_response}")
