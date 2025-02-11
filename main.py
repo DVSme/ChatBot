@@ -3,10 +3,8 @@ import logging
 from openai import OpenAI
 from aiogram import Bot, Dispatcher, types, Router
 from aiogram.types import Update, ReplyKeyboardMarkup, KeyboardButton
-from fastapi import FastAPI, Request
-
 from aiogram.filters import CommandStart
-
+from fastapi import FastAPI, Request
 import asyncio
 import httpx
 import uvicorn
@@ -14,12 +12,7 @@ import uvicorn
 # Загружаем переменные окружения
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-# Проверяем API-ключи
-if not TOKEN:
-    raise ValueError("\u274c TELEGRAM_BOT_TOKEN не найден в переменных окружения!")
-if not OPENAI_API_KEY:
-    raise ValueError("\u274c OPENAI_API_KEY не найден в переменных окружения!")
+PORT = int(os.getenv("PORT", 8000))  # Используем PORT от Render
 
 # Логирование
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -37,14 +30,10 @@ app = FastAPI()
 WEBHOOK_URL = f"https://chatbot-cfr8.onrender.com/webhook"
 PING_URL = "https://chatbot-cfr8.onrender.com/ping"
 
-# \u2705 Проверяем и устанавливаем вебхук
+# \u2705 Принудительно устанавливаем вебхук
 async def set_webhook():
-    webhook_info = await bot.get_webhook_info()
-    if not webhook_info.url or webhook_info.url != WEBHOOK_URL:
-        await bot.set_webhook(WEBHOOK_URL)
-        logging.info(f"\u2705 Webhook установлен: {WEBHOOK_URL}")
-    else:
-        logging.info("\u2705 Webhook уже установлен")
+    await bot.set_webhook(WEBHOOK_URL)
+    logging.info(f"\u2705 Webhook установлен: {WEBHOOK_URL}")
 
 # \u2705 Keep-Alive (Исправленный)
 async def keep_awake():
@@ -58,18 +47,6 @@ async def keep_awake():
             logging.error(f"\u274c Keep-alive error: {e}")
 
         await asyncio.sleep(30)  # 30 \u0441\u0435\u043a\u0443\u043d\u0434
-
-# \u2705 Перезапуск Webhook каждые 50 секунд
-async def restart_webhook():
-    await asyncio.sleep(5)  # \u0414\u0410\u0415\u041c \u0412\u0420\u0415\u041c\u042f \u041d\u0410 \u0421\u0422\u0410\u0420\u0422!
-    while True:
-        try:
-            await bot.set_webhook(WEBHOOK_URL)
-            logging.info("\ud83d\udd04 Webhook перезапущен.")
-        except Exception as e:
-            logging.error(f"\u274c Ошибка при перезапуске Webhook: {e}")
-
-        await asyncio.sleep(50)  # \ud83d\udd04 Перезапускаем Webhook каждые 50 секунд
 
 # Главное меню
 menu_keyboard = ReplyKeyboardMarkup(
@@ -86,13 +63,21 @@ menu_keyboard = ReplyKeyboardMarkup(
 async def startup():
     await set_webhook()
     asyncio.create_task(keep_awake())  # Keep-Alive
-    asyncio.create_task(restart_webhook())  # \u2705 Автоматический перезапуск Webhook
 
 @app.on_event("shutdown")
 async def shutdown():
     await bot.delete_webhook()
     logging.info("\u2705 Webhook удалён")
 
+# \ud83d\udccc Маршрут вебхука
+@app.post("/webhook")
+async def telegram_webhook(request: Request):
+    update = await request.json()
+    telegram_update = Update.model_validate(update)
+    await dp.feed_update(bot, telegram_update)
+    return {"status": "ok"}
+
+# Обработчик команды /start
 @router.message(CommandStart())
 async def start_handler(message: types.Message):
     await message.answer(
@@ -116,4 +101,4 @@ async def info_handler(message: types.Message):
 # Запуск FastAPI
 if __name__ == "__main__":
     print("\ud83d\ude80 Запуск FastAPI...")
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
