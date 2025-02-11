@@ -4,6 +4,9 @@ from openai import OpenAI
 from aiogram import Bot, Dispatcher, types, Router
 from aiogram.types import Update, ReplyKeyboardMarkup, KeyboardButton
 from fastapi import FastAPI, Request
+
+from aiogram.filters import CommandStart
+
 import asyncio
 import httpx
 import uvicorn
@@ -90,7 +93,7 @@ async def shutdown():
     await bot.delete_webhook()
     logging.info("\u2705 Webhook удалён")
 
-@router.message(commands=["start"])
+@router.message(CommandStart())
 async def start_handler(message: types.Message):
     await message.answer(
         "\ud83d\udc4b Привет! Это бот на базе ChatGPT. Выберите действие из меню ниже:",
