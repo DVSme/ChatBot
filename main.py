@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message
+from aiogram.filters import Command
+
 import logging
 import os
 
@@ -25,7 +27,8 @@ async def telegram_webhook(update: dict):
         logging.error(f"Webhook processing error: {e}")
     return {"ok": True}
 
-@dp.message(commands=["start"])
+@dp.message(Command("start"))
+
 async def start_handler(message: Message):
     try:
         text = "\U0001F916 Этот бот работает на основе ChatGPT.\n\n📌 Возможности:\n" \
