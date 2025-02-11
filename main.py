@@ -13,11 +13,11 @@ dp = Dispatcher()
 
 logging.basicConfig(level=logging.INFO)
 
-@app.get("/ping")
+@app.get("https://chatbot-cfr8.onrender.com/ping")
 def ping():
     return {"status": "ok"}
 
-@app.post("/webhook")
+@app.post("https://chatbot-cfr8.onrender.com/webhook")
 async def telegram_webhook(update: dict):
     try:
         logging.info(f"Incoming update: {update}")
