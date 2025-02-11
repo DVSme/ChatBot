@@ -2,8 +2,7 @@ import os
 import logging
 from openai import OpenAI
 from aiogram import Bot, Dispatcher, types, Router
-from aiogram.types import Update, ReplyKeyboardMarkup, KeyboardButton
-from aiogram.filters import CommandStart
+from aiogram.types import Update
 from fastapi import FastAPI, Request
 import asyncio
 import httpx
@@ -12,16 +11,15 @@ import uvicorn
 # Загружаем переменные окружения
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-PORT = int(os.environ.get("PORT", 10000))  # Используем PORT от Render
 
 # Проверяем API-ключи
 if not TOKEN:
-    raise ValueError("Ошибка: TELEGRAM_BOT_TOKEN не найден!")
+    raise ValueError("❌ TELEGRAM_BOT_TOKEN не найден в переменных окружения!")
 if not OPENAI_API_KEY:
-    raise ValueError("Ошибка: OPENAI_API_KEY не найден!")
+    raise ValueError("❌ OPENAI_API_KEY не найден в переменных окружения!")
 
 # Логирование
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO)
 
 # Создаём бота и диспетчер
 bot = Bot(token=TOKEN)
@@ -36,91 +34,95 @@ app = FastAPI()
 WEBHOOK_URL = f"https://chatbot-cfr8.onrender.com/webhook"
 PING_URL = "https://chatbot-cfr8.onrender.com/ping"
 
-# Принудительно устанавливаем вебхук
+# ✅ Проверяем и устанавливаем вебхук
 async def set_webhook():
-    await bot.set_webhook(WEBHOOK_URL)
-    logging.info(f"Webhook установлен: {WEBHOOK_URL}")
+    webhook_info = await bot.get_webhook_info()
+    if not webhook_info.url or webhook_info.url != WEBHOOK_URL:
+        await bot.set_webhook(WEBHOOK_URL)
+        logging.info(f"✅ Webhook установлен: {WEBHOOK_URL}")
+    else:
+        logging.info("✅ Webhook уже установлен")
 
-# Keep-Alive (Исправленный)
+# ✅ Keep-Alive (Исправленный)
 async def keep_awake():
-    await asyncio.sleep(5)
+    await asyncio.sleep(5)  # ДАЁМ ВРЕМЯ НА СТАРТ!
     while True:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(PING_URL)
-                logging.info(f"Keep-alive ping sent: {response.status_code}")
+                logging.info(f"🔄 Keep-alive ping sent: {response.status_code}")
         except Exception as e:
-            logging.error(f"Keep-alive error: {e}")
-        await asyncio.sleep(30)
+            logging.error(f"❌ Keep-alive error: {e}")
 
-# Главное меню
-menu_keyboard = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="ℹ Информация о боте")],
-        [KeyboardButton(text="⚙ Выбрать модель"), KeyboardButton(text="💾 Запоминание истории")],
-        [KeyboardButton(text="⛔ Остановка сохранения"), KeyboardButton(text="🔄 Сброс истории и настроек")]
-    ],
-    resize_keyboard=True
-)
+        await asyncio.sleep(30)  # 30 секунд
 
-# Запускаем сервер
+# ✅ Перезапуск Webhook каждые 50 секунд
+async def restart_webhook():
+    await asyncio.sleep(5)  # ДАЁМ ВРЕМЯ НА СТАРТ!
+    while True:
+        try:
+            await bot.set_webhook(WEBHOOK_URL)
+            logging.info("🔄 Webhook перезапущен.")
+        except Exception as e:
+            logging.error(f"❌ Ошибка при перезапуске Webhook: {e}")
+
+        await asyncio.sleep(50)  # 🔄 Перезапускаем Webhook каждые 50 секунд
+
+# 🚀 Запускаем сервер
 @app.on_event("startup")
 async def startup():
     await set_webhook()
-    asyncio.create_task(keep_awake())
+    asyncio.create_task(keep_awake())  # Keep-Alive
+    asyncio.create_task(restart_webhook())  # ✅ Автоматический перезапуск Webhook
 
 @app.on_event("shutdown")
 async def shutdown():
     await bot.delete_webhook()
-    logging.info("Webhook удалён")
+    logging.info("✅ Webhook удалён")
 
-# Маршрут вебхука
-@app.post("/webhook")
-async def telegram_webhook(request: Request):
-    try:
-        update = await request.json()
-        telegram_update = Update.model_validate(update)
-        await dp.feed_update(bot, telegram_update)
-        return {"status": "ok"}
-    except Exception as e:
-        logging.error(f"Ошибка обработки вебхука: {e}")
-        return {"status": "error", "message": str(e)}
+# 📌 Тестовый маршрут
+@app.get("/")
+async def root():
+    return {"message": "✅ Bot is running!"}
 
-# Добавляем /ping для проверки
+# 📌 Keep-alive (пинг)
 @app.get("/ping")
 async def ping():
     return {"status": "I'm awake!"}
 
-# Обработчик команды /start
-@router.message(CommandStart())
-async def start_handler(message: types.Message):
-    try:
-        await message.answer(
-            "Привет! Это бот на базе ChatGPT. Выберите действие:",
-            reply_markup=menu_keyboard
-        )
-    except Exception as e:
-        logging.error(f"Ошибка в команде /start: {e}")
-        await message.answer("Ошибка при загрузке меню.")
+# 📌 Основной вебхук
+@app.post("/webhook")
+async def telegram_webhook(request: Request):
+    update = await request.json()
+    telegram_update = Update.model_validate(update)  # Валидация данных
+    await dp.feed_update(bot, telegram_update)
+    return {"status": "ok"}
 
-@router.message(lambda message: message.text == "ℹ Информация о боте")
-async def info_handler(message: types.Message):
+# 🔥 Обработчик сообщений с ChatGPT
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+@router.message()
+async def chatgpt_handler(message: types.Message):
     try:
-        info_text = (
-            "🤖 Этот бот работает на основе ChatGPT.\n\n"
-            "📌 Возможности:\n"
-            "🔹 Отвечает на вопросы с использованием ИИ.\n"
-            "🔹 Позволяет выбирать модель ChatGPT.\n"
-            "🔹 Может запоминать историю диалога.\n"
-            "🔹 Позволяет сбрасывать историю и настройки.\n"
-            "🔹 Работает в Telegram через вебхук."
-        )
-        await message.answer(info_text)
+        user_input = message.text
+        logging.info(f"📩 Пользователь отправил: {user_input}")
+
+        # API вызов OpenAI
+        response = client.chat.completions.create(
+           model="gpt-4o-mini",
+           messages=[{"role": "user", "content": user_input}]
+        )  
+
+        bot_response = response.choices[0].message.content
+        logging.info(f"🤖 Ответ ChatGPT: {bot_response}")
+
+        await message.answer(bot_response)
+
     except Exception as e:
-        logging.error(f"Ошибка в обработке информации: {e}")
-        await message.answer("Ошибка при загрузке информации.")
+        logging.error(f"❌ Ошибка в обработке сообщения: {e}")
+        await message.answer(f"⚠ Ошибка: {str(e)}")
 
 # Запуск FastAPI
 if _name_ == "_main_":
-    print("Запуск FastAPI...")
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    print("🚀 Запуск FastAPI...")
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
