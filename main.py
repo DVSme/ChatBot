@@ -12,7 +12,13 @@ import uvicorn
 # Загружаем переменные окружения
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-PORT = int(os.getenv("PORT", 8000))  # Используем PORT от Render
+PORT = int(os.environ.get("PORT", 10000))  # Используем PORT от Render
+
+# Проверяем API-ключи
+if not TOKEN:
+    raise ValueError("\u274c TELEGRAM_BOT_TOKEN не найден в переменных окружения!")
+if not OPENAI_API_KEY:
+    raise ValueError("\u274c OPENAI_API_KEY не найден в переменных окружения!")
 
 # Логирование
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
