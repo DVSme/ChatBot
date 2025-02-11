@@ -19,7 +19,7 @@ if not OPENAI_API_KEY:
     raise ValueError("❌ OPENAI_API_KEY не найден в переменных окружения!")
 
 # Логирование
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO)
 
 # Создаём бота и диспетчер
 bot = Bot(token=TOKEN)
@@ -56,24 +56,19 @@ async def keep_awake():
 
         await asyncio.sleep(30)  # 30 секунд
 
-# ✅ Перезапуск Webhook каждые 50 секунд
-async def restart_webhook():
-    await asyncio.sleep(5)  # ДАЁМ ВРЕМЯ НА СТАРТ!
-    while True:
-        try:
-            await bot.set_webhook(WEBHOOK_URL)
-            logging.info("🔄 Webhook перезапущен.")
-        except Exception as e:
-            logging.error(f"❌ Ошибка при перезапуске Webhook: {e}")
-
-        await asyncio.sleep(50)  # 🔄 Перезапускаем Webhook каждые 50 секунд
+# ✅ Запускаем бота
+async def run_bot():
+    try:
+        await dp.start_polling(bot)
+    except Exception as e:
+        logging.error(f"❌ Ошибка при запуске бота: {e}")
 
 # 🚀 Запускаем сервер
 @app.on_event("startup")
 async def startup():
     await set_webhook()
     asyncio.create_task(keep_awake())  # Keep-Alive
-    asyncio.create_task(restart_webhook())  # ✅ Автоматический перезапуск Webhook
+    asyncio.create_task(run_bot())  # ✅ Запускаем бота в фоне!
 
 @app.on_event("shutdown")
 async def shutdown():
@@ -107,23 +102,11 @@ async def chatgpt_handler(message: types.Message):
         user_input = message.text
         logging.info(f"📩 Пользователь отправил: {user_input}")
 
-        selected_model = "gpt-4o-mini"  # ✅ Принудительно указываем модель
-
-        # Логируем, какая модель будет отправлена в API
-        logging.info(f"🚀 Отправляем запрос в OpenAI с моделью: {selected_model}")
-
+        # API вызов OpenAI
         response = client.chat.completions.create(
-            model=selected_model,
-            messages=[{"role": "user", "content": user_input}]
-        )
-
-        # ✅ Проверяем, какую модель реально вернул OpenAI
-        real_model_used = response.model
-        logging.info(f"✅ OpenAI вернул модель: {real_model_used}")
-
-        # ❌ Если OpenAI вернул другую модель, логируем ошибку
-        if real_model_used != selected_model:
-            logging.warning(f"⚠️ OpenAI самовольно заменил модель: {real_model_used} вместо {selected_model}")
+           model="gpt-4o-mini",
+           messages=[{"role": "user", "content": user_input}]
+        )  
 
         bot_response = response.choices[0].message.content
         logging.info(f"🤖 Ответ ChatGPT: {bot_response}")
@@ -132,9 +115,9 @@ async def chatgpt_handler(message: types.Message):
 
     except Exception as e:
         logging.error(f"❌ Ошибка в обработке сообщения: {e}")
-        await message.answer(f"⚠️ Ошибка: {str(e)}")
+        await message.answer(f"⚠ Ошибка: {str(e)}")
 
 # Запуск FastAPI
-if __name__ == "__main__":
+if name == "main":
     print("🚀 Запуск FastAPI...")
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
