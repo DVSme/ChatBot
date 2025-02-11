@@ -34,22 +34,6 @@ app = FastAPI()
 WEBHOOK_URL = f"https://chatbot-cfr8.onrender.com/webhook"
 PING_URL = "https://chatbot-cfr8.onrender.com/ping"
 
-# Глобальные переменные
-user_history = {}
-selected_model = {}
-
-# Кнопки меню
-menu_keyboard = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="ℹ Информация о боте")],
-        [KeyboardButton(text="🛠 Выбрать модель ChatGPT")],
-        [KeyboardButton(text="📝 Запоминание истории")],
-        [KeyboardButton(text="⛔ Остановка сохранения истории")],
-        [KeyboardButton(text="🔄 Сброс истории и настроек")]
-    ],
-    resize_keyboard=True
-)
-
 # ✅ Проверяем и устанавливаем вебхук
 async def set_webhook():
     webhook_info = await bot.get_webhook_info()
@@ -61,7 +45,7 @@ async def set_webhook():
 
 # ✅ Keep-Alive (Исправленный)
 async def keep_awake():
-    await asyncio.sleep(5)
+    await asyncio.sleep(5)  # ДАЁМ ВРЕМЯ НА СТАРТ!
     while True:
         try:
             async with httpx.AsyncClient() as client:
@@ -69,7 +53,8 @@ async def keep_awake():
                 logging.info(f"🔄 Keep-alive ping sent: {response.status_code}")
         except Exception as e:
             logging.error(f"❌ Keep-alive error: {e}")
-        await asyncio.sleep(30)
+
+        await asyncio.sleep(30)  # 30 секунд
 
 # ✅ Запускаем бота
 async def run_bot():
@@ -78,69 +63,79 @@ async def run_bot():
     except Exception as e:
         logging.error(f"❌ Ошибка при запуске бота: {e}")
 
+# 🚀 Запускаем сервер
 @app.on_event("startup")
 async def startup():
     await set_webhook()
-    asyncio.create_task(keep_awake())
-    asyncio.create_task(run_bot())
+    asyncio.create_task(keep_awake())  # Keep-Alive
+    asyncio.create_task(run_bot())  # ✅ Запускаем бота в фоне!
 
 @app.on_event("shutdown")
 async def shutdown():
     await bot.delete_webhook()
     logging.info("✅ Webhook удалён")
 
+# 📌 Тестовый маршрут
 @app.get("/")
 async def root():
     return {"message": "✅ Bot is running!"}
 
+# 📌 Keep-alive (пинг)
 @app.get("/ping")
 async def ping():
     return {"status": "I'm awake!"}
 
+# 📌 Основной вебхук
 @app.post("/webhook")
 async def telegram_webhook(request: Request):
     update = await request.json()
-    telegram_update = Update.model_validate(update)
+    telegram_update = Update.model_validate(update)  # Валидация данных
     await dp.feed_update(bot, telegram_update)
     return {"status": "ok"}
 
-# Обработчик меню
+# 🔥 Обработчик сообщений с ChatGPT
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+# ✅ Меню
+menu_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
+menu_keyboard.add(
+    KeyboardButton("ℹ Информация о боте"),
+    KeyboardButton("⚙ Выбрать модель ChatGPT")
+)
+menu_keyboard.add(
+    KeyboardButton("📌 Запоминание истории"),
+    KeyboardButton("⛔ Остановка сохранения истории")
+)
+menu_keyboard.add(KeyboardButton("🗑 Сброс истории и настроек"))
+
+# ✅ Обработчик команды /start
+@router.message(commands=["start"])
+async def start_handler(message: types.Message):
+    await message.answer("Привет! 👋 Я ваш помощник. Выберите опцию:", reply_markup=menu_keyboard)
+
+# ✅ Обработчик сообщений с ChatGPT
 @router.message()
-async def menu_handler(message: types.Message):
-    user_id = message.from_user.id
-    if message.text == "ℹ Информация о боте":
-        await message.answer("🤖 Этот бот использует ChatGPT для генерации ответов!", reply_markup=menu_keyboard)
-    elif message.text == "🛠 Выбрать модель ChatGPT":
-        selected_model[user_id] = "gpt-4o-mini"
-        await message.answer("✅ Выбрана модель gpt-4o-mini", reply_markup=menu_keyboard)
-    elif message.text == "📝 Запоминание истории":
-        user_history[user_id] = []
-        await message.answer("📌 История сообщений теперь запоминается!", reply_markup=menu_keyboard)
-    elif message.text == "⛔ Остановка сохранения истории":
-        user_history.pop(user_id, None)
-        await message.answer("🛑 История сообщений больше не сохраняется.", reply_markup=menu_keyboard)
-    elif message.text == "🔄 Сброс истории и настроек":
-        user_history.pop(user_id, None)
-        selected_model.pop(user_id, None)
-        await message.answer("♻ История и настройки сброшены.", reply_markup=menu_keyboard)
-    else:
+async def chatgpt_handler(message: types.Message):
+    try:
         user_input = message.text
         logging.info(f"📩 Пользователь отправил: {user_input}")
 
-        client = OpenAI(api_key=OPENAI_API_KEY)
+        # API вызов OpenAI
         response = client.chat.completions.create(
-            model=selected_model.get(user_id, "gpt-4o-mini"),
-            messages=[{"role": "user", "content": user_input}]
-        )
+           model="gpt-4o-mini",
+           messages=[{"role": "user", "content": user_input}]
+        )  
 
         bot_response = response.choices[0].message.content
         logging.info(f"🤖 Ответ ChatGPT: {bot_response}")
 
-        if user_id in user_history:
-            user_history[user_id].append((user_input, bot_response))
+        await message.answer(bot_response)
 
-        await message.answer(bot_response, reply_markup=menu_keyboard)
+    except Exception as e:
+        logging.error(f"❌ Ошибка в обработке сообщения: {e}")
+        await message.answer(f"⚠ Ошибка: {str(e)}")
 
+# Запуск FastAPI
 if __name__ == "__main__":
     print("🚀 Запуск FastAPI...")
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
