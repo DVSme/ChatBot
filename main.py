@@ -14,9 +14,9 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Проверяем API-ключи
 if not TOKEN:
-    raise ValueError("❌ TELEGRAM_BOT_TOKEN не найден в переменных окружения!")
+    raise ValueError("\u274c TELEGRAM_BOT_TOKEN не найден в переменных окружения!")
 if not OPENAI_API_KEY:
-    raise ValueError("❌ OPENAI_API_KEY не найден в переменных окружения!")
+    raise ValueError("\u274c OPENAI_API_KEY не найден в переменных окружения!")
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
@@ -33,6 +33,18 @@ app = FastAPI()
 # URL вебхука
 WEBHOOK_URL = f"https://chatbot-cfr8.onrender.com/webhook"
 PING_URL = "https://chatbot-cfr8.onrender.com/ping"
+
+# ✅ Меню
+menu_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="ℹ Информация о боте")],
+        [KeyboardButton(text="⚙ Выбрать модель GPT")],
+        [KeyboardButton(text="📝 Включить сохранение истории")],
+        [KeyboardButton(text="🛑 Остановить сохранение истории")],
+        [KeyboardButton(text="🔄 Сбросить историю и настройки")],
+    ],
+    resize_keyboard=True
+)
 
 # ✅ Проверяем и устанавливаем вебхук
 async def set_webhook():
@@ -96,24 +108,6 @@ async def telegram_webhook(request: Request):
 # 🔥 Обработчик сообщений с ChatGPT
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-# ✅ Меню
-menu_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-menu_keyboard.add(
-    KeyboardButton("ℹ Информация о боте"),
-    KeyboardButton("⚙ Выбрать модель ChatGPT")
-)
-menu_keyboard.add(
-    KeyboardButton("📌 Запоминание истории"),
-    KeyboardButton("⛔ Остановка сохранения истории")
-)
-menu_keyboard.add(KeyboardButton("🗑 Сброс истории и настроек"))
-
-# ✅ Обработчик команды /start
-@router.message(commands=["start"])
-async def start_handler(message: types.Message):
-    await message.answer("Привет! 👋 Я ваш помощник. Выберите опцию:", reply_markup=menu_keyboard)
-
-# ✅ Обработчик сообщений с ChatGPT
 @router.message()
 async def chatgpt_handler(message: types.Message):
     try:
@@ -129,7 +123,7 @@ async def chatgpt_handler(message: types.Message):
         bot_response = response.choices[0].message.content
         logging.info(f"🤖 Ответ ChatGPT: {bot_response}")
 
-        await message.answer(bot_response)
+        await message.answer(bot_response, reply_markup=menu_keyboard)
 
     except Exception as e:
         logging.error(f"❌ Ошибка в обработке сообщения: {e}")
