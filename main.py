@@ -58,15 +58,15 @@ async def set_webhook():
 # ✅ Keep-Alive (Исправленный)
 async def keep_awake():
     await asyncio.sleep(5)  # ДАЁМ ВРЕМЯ НА СТАРТ!
-    while True:
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(PING_URL)
-                logging.info(f"🔄 Keep-alive ping sent: {response.status_code}")
-        except Exception as e:
-            logging.error(f"❌ Keep-alive error: {e}")
+   # while True:
+   #     try:
+    #        async with httpx.AsyncClient() as client:
+     #           response = await client.get(PING_URL)
+     #           logging.info(f"🔄 Keep-alive ping sent: {response.status_code}")
+      #  except Exception as e:
+       #     logging.error(f"❌ Keep-alive error: {e}")
 
-        await asyncio.sleep(30)  # 30 секунд
+       # await asyncio.sleep(30)  # 30 секунд
 
 # ✅ Запускаем бота
 async def run_bot():
@@ -79,8 +79,8 @@ async def run_bot():
 @app.on_event("startup")
 async def startup():
     await set_webhook()
-    asyncio.create_task(keep_awake())  # Keep-Alive
-    asyncio.create_task(run_bot())  # ✅ Запускаем бота в фоне!
+   # asyncio.create_task(keep_awake())  # Keep-Alive
+   # asyncio.create_task(run_bot())  # ✅ Запускаем бота в фоне!
 
 @app.on_event("shutdown")
 async def shutdown():
