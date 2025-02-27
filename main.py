@@ -56,8 +56,8 @@ async def set_webhook():
         logging.info("✅ Webhook уже установлен")
 
 # ✅ Keep-Alive (Исправленный)
-async def keep_awake():
-    await asyncio.sleep(5)  # ДАЁМ ВРЕМЯ НА СТАРТ!
+#async def keep_awake():
+ #   await asyncio.sleep(5)  # ДАЁМ ВРЕМЯ НА СТАРТ!
    # while True:
    #     try:
     #        async with httpx.AsyncClient() as client:
@@ -80,12 +80,12 @@ async def run_bot():
 async def startup():
     await set_webhook()
    # asyncio.create_task(keep_awake())  # Keep-Alive
-   # asyncio.create_task(run_bot())  # ✅ Запускаем бота в фоне!
+    asyncio.create_task(run_bot())  # ✅ Запускаем бота в фоне!
 
-@app.on_event("shutdown")
-async def shutdown():
-    await bot.delete_webhook()
-    logging.info("✅ Webhook удалён")
+#@app.on_event("shutdown")
+#async def shutdown():
+ #   await bot.delete_webhook()
+  #  logging.info("✅ Webhook удалён")
 
 # 📌 Тестовый маршрут
 @app.get("/")
